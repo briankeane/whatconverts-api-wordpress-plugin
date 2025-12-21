@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: WhatConverts Metrics
+ * Plugin Name: WhatConverts API Metrics
  * Description: Display lead metrics from WhatConverts API
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Alloy GP
  */
 

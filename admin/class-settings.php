@@ -12,7 +12,7 @@ class WCM_Settings {
     }
 
     public static function add_menu(): void {
-        add_options_page('WhatConverts Metrics', 'WhatConverts', 'manage_options', self::PAGE, [self::class, 'render_page']);
+        add_options_page('WhatConverts API Metrics', 'WhatConverts API', 'manage_options', self::PAGE, [self::class, 'render_page']);
     }
 
     public static function register_settings(): void {
