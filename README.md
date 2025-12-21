@@ -1,21 +1,19 @@
-# WhatConverts Metrics
+# WhatConverts API Metrics
 
 WordPress plugin to display lead metrics from the WhatConverts API.
 
 ## Installation
 
-1. Create a zip of the plugin (excluding dev files):
+1. Create a zip of the plugin:
    ```bash
-   zip -r whatconverts-metrics.zip whatconverts-metrics \
-       -x "*/vendor/*" -x "*/tests/*" -x "*/composer.*" \
-       -x "*/.git/*" -x "*/phpunit.xml" -x "*/.phpunit.cache/*"
+   make zip
    ```
 
 2. In WordPress admin: **Plugins → Add New → Upload Plugin**
 
 3. Upload the zip and activate
 
-4. Go to **Settings → WhatConverts** and enter your API credentials
+4. Go to **Settings → WhatConverts API** and enter your API credentials
 
 ## Configuration
 
@@ -65,7 +63,10 @@ Requires PHP 8.0+
 composer install
 
 # Run tests
-composer test
+make test
+
+# Create deployment zip
+make zip
 ```
 
 ## Lead Status Mapping
@@ -79,8 +80,8 @@ composer test
 ## Updating the Plugin
 
 1. Bump version in `whatconverts-metrics.php`
-2. Run `composer test`
-3. Create new zip
+2. Run `make test`
+3. Run `make zip`
 4. In WordPress: Deactivate → Delete → Upload new zip → Activate
 
 Settings persist across updates.
