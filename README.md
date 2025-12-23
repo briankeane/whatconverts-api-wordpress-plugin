@@ -72,7 +72,7 @@ Combine with account_id:
 
 - Data is cached per account and date range. Default TTL is 60 minutes and can be configured under **Settings → WhatConverts API → Cache Length (minutes)** (minimum 5 minutes).
 - A cron job prewarms the cache hourly (`wcm_prewarm_cache`), so front-end/admin requests should not need to fetch live data. It prewarms existing cache keys and any targets returned by the `wcm_prewarm_targets` filter.
-- Clear cache at **Settings → WhatConverts API → Clear Cache**.
+- Clear cache at **Settings → WhatConverts API → Clear Cache**. The Settings page preview uses cached data only; click “Refresh Preview (async)” if you want to schedule an immediate prewarm without blocking the page load.
 
 ## Development
 

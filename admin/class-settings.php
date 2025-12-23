@@ -9,6 +9,7 @@ class WCM_Settings {
         add_action('admin_init', [self::class, 'register_settings']);
         add_action('admin_post_wcm_test_connection', [self::class, 'handle_test_connection']);
         add_action('admin_post_wcm_clear_cache', [self::class, 'handle_clear_cache']);
+        add_action('admin_post_wcm_prewarm_now', [self::class, 'handle_prewarm_now']);
     }
 
     public static function add_menu(): void {
@@ -90,6 +91,11 @@ class WCM_Settings {
                 <input type="hidden" name="action" value="wcm_clear_cache">
                 <button type="submit" class="button">Clear Cache</button>
             </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;margin-left:10px">
+                <?php wp_nonce_field('wcm_prewarm_now', 'wcm_nonce'); ?>
+                <input type="hidden" name="action" value="wcm_prewarm_now">
+                <button type="submit" class="button">Refresh Preview (async)</button>
+            </form>
 
             <hr>
             <h2>Shortcodes</h2>
@@ -114,7 +120,14 @@ class WCM_Settings {
             return;
         }
 
-        $metrics = (new WCM_Metrics($api))->get_metrics();
+        $cache_key = 'wcm_metrics_all_12';
+        $metrics = get_transient($cache_key);
+
+        if ($metrics === false) {
+            echo '<p><em>No cached data yet. The hourly prewarm job will populate this, or click "Refresh Preview".</em></p>';
+            return;
+        }
+
         if (is_wp_error($metrics)) {
             printf('<p class="error">Error: %s</p>', esc_html($metrics->get_error_message()));
             return;
@@ -153,6 +166,18 @@ class WCM_Settings {
 
         (new WCM_Metrics())->clear_all_caches();
         wp_redirect(add_query_arg('wcm_message', 'cache_cleared', admin_url('options-general.php?page=' . self::PAGE)));
+        exit;
+    }
+
+    public static function handle_prewarm_now(): void {
+        if (!current_user_can('manage_options')) wp_die('Unauthorized');
+        check_admin_referer('wcm_prewarm_now', 'wcm_nonce');
+
+        if (!wp_next_scheduled(WCM_Cron::EVENT)) {
+            wp_schedule_single_event(time(), WCM_Cron::EVENT);
+        }
+
+        wp_redirect(add_query_arg('wcm_message', 'prewarm_scheduled', admin_url('options-general.php?page=' . self::PAGE)));
         exit;
     }
 }

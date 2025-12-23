@@ -51,3 +51,4 @@ require_once WCM_PLUGIN_DIR . 'includes/class-api.php';
 require_once WCM_PLUGIN_DIR . 'includes/class-metrics.php';
 require_once WCM_PLUGIN_DIR . 'includes/class-cron.php';
 require_once WCM_PLUGIN_DIR . 'includes/class-shortcodes.php';
+require_once WCM_PLUGIN_DIR . 'admin/class-settings.php';

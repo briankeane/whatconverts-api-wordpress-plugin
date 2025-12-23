@@ -2,7 +2,7 @@
 if (!defined('ABSPATH')) exit;
 
 class WCM_Cron {
-    private const EVENT = 'wcm_prewarm_cache';
+    public const EVENT = 'wcm_prewarm_cache';
 
     public static function register(): void {
         add_action(self::EVENT, [self::class, 'prewarm_caches']);
