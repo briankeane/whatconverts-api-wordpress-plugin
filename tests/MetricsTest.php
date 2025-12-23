@@ -14,50 +14,67 @@ class MetricsTest extends TestCase {
         parent::tearDown();
     }
 
-    public function test_counts_qualified_leads_case_insensitive(): void {
+    public function test_counts_qualified_leads_by_quotable_field(): void {
         $metrics = new WCM_Metrics($this->createMock(WCM_API::class));
 
         $result = $metrics->calculate_metrics([
-            ['lead_status' => 'Qualified'],
-            ['lead_status' => 'qualified'],
-            ['lead_status' => 'Quotable'],
-            ['lead_status' => 'New'],
+            ['quotable' => 'Yes'],
+            ['quotable' => 'yes'],
+            ['quotable' => 'YES'],
+            ['quotable' => 'No'],
+            ['quotable' => ''],
         ]);
 
         $this->assertEquals(3, $result['qualified_leads']);
-        $this->assertEquals(4, $result['total_leads']);
+        $this->assertEquals(5, $result['total_leads']);
     }
 
-    public function test_counts_closed_leads_and_sums_value(): void {
+    public function test_counts_closed_leads_by_sales_value(): void {
         $metrics = new WCM_Metrics($this->createMock(WCM_API::class));
 
         $result = $metrics->calculate_metrics([
-            ['lead_status' => 'Closed', 'sales_value' => 1000],
-            ['lead_status' => 'closed', 'sales_value' => 500],
-            ['lead_status' => 'Converted', 'sales_value' => 2000],
-            ['lead_status' => 'Qualified', 'sales_value' => 9999],
+            ['sales_value' => 1000],
+            ['sales_value' => 500],
+            ['sales_value' => 2000],
+            ['sales_value' => 0],
+            ['quotable' => 'Yes'],
         ]);
 
         $this->assertEquals(3, $result['closed_leads']);
-        $this->assertEquals(3500.0, $result['annual_value']);
+        $this->assertEquals(3500.0, $result['annual_sales_value']);
     }
 
-    public function test_uses_quote_value_when_sales_value_missing(): void {
+    public function test_sums_quote_value_separately(): void {
         $metrics = new WCM_Metrics($this->createMock(WCM_API::class));
 
         $result = $metrics->calculate_metrics([
-            ['lead_status' => 'Closed', 'quote_value' => 500],
-            ['lead_status' => 'Closed', 'sales_value' => 1000, 'quote_value' => 999],
+            ['quote_value' => 500],
+            ['quote_value' => 1000],
+            ['sales_value' => 200, 'quote_value' => 300],
         ]);
 
-        $this->assertEquals(1500.0, $result['annual_value']);
+        $this->assertEquals(1800.0, $result['annual_quote_value']);
+        $this->assertEquals(200.0, $result['annual_sales_value']);
+    }
+
+    public function test_tracks_sales_and_quote_values_independently(): void {
+        $metrics = new WCM_Metrics($this->createMock(WCM_API::class));
+
+        $result = $metrics->calculate_metrics([
+            ['sales_value' => 1000, 'quote_value' => 999],
+        ]);
+
+        $this->assertEquals(1, $result['closed_leads']);
+        $this->assertEquals(1000.0, $result['annual_sales_value']);
+        $this->assertEquals(999.0, $result['annual_quote_value']);
     }
 
     public function test_returns_cached_data_without_api_call(): void {
         Functions\when('get_transient')->justReturn([
             'qualified_leads' => 100,
             'closed_leads' => 50,
-            'annual_value' => 10000,
+            'annual_sales_value' => 10000,
+            'annual_quote_value' => 15000,
             'total_leads' => 200,
             'last_updated' => '2024-01-01 12:00:00',
         ]);
@@ -75,15 +92,16 @@ class MetricsTest extends TestCase {
 
         $api = $this->createMock(WCM_API::class);
         $api->method('fetch_leads')->willReturn([
-            ['lead_status' => 'Qualified'],
-            ['lead_status' => 'Closed', 'sales_value' => 500],
+            ['quotable' => 'Yes', 'quote_value' => 750],
+            ['sales_value' => 500],
         ]);
 
         $result = (new WCM_Metrics($api))->get_metrics();
 
         $this->assertEquals(1, $result['qualified_leads']);
         $this->assertEquals(1, $result['closed_leads']);
-        $this->assertEquals(500.0, $result['annual_value']);
+        $this->assertEquals(500.0, $result['annual_sales_value']);
+        $this->assertEquals(750.0, $result['annual_quote_value']);
     }
 
     public function test_force_refresh_bypasses_cache(): void {
@@ -95,5 +113,35 @@ class MetricsTest extends TestCase {
 
         $result = (new WCM_Metrics($api))->get_metrics(force_refresh: true);
         $this->assertEquals(0, $result['qualified_leads']);
+    }
+
+    public function test_default_months_is_all_time(): void {
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('set_transient')->justReturn(true);
+
+        $api = $this->createMock(WCM_API::class);
+        $api->expects($this->once())
+            ->method('fetch_leads')
+            ->with($this->callback(function($params) {
+                return $params['months'] === 'all';
+            }))
+            ->willReturn([]);
+
+        (new WCM_Metrics($api))->get_metrics();
+    }
+
+    public function test_months_parameter_passed_to_api(): void {
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('set_transient')->justReturn(true);
+
+        $api = $this->createMock(WCM_API::class);
+        $api->expects($this->once())
+            ->method('fetch_leads')
+            ->with($this->callback(function($params) {
+                return $params['months'] === '3';
+            }))
+            ->willReturn([]);
+
+        (new WCM_Metrics($api))->get_metrics(false, '3');
     }
 }

@@ -33,5 +33,5 @@ register_activation_hook(__FILE__, function() {
 });
 
 register_deactivation_hook(__FILE__, function() {
-    delete_transient('wcm_metrics_cache');
+    (new WCM_Metrics())->clear_all_caches();
 });

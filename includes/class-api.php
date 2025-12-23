@@ -24,12 +24,19 @@ class WCM_API {
             return new WP_Error('wcm_not_configured', 'API credentials not configured');
         }
 
+        $months = $params['months'] ?? '12';
+        unset($params['months']);
+
         $defaults = [
-            'start_date' => gmdate('Y-m-d', strtotime('-12 months')),
-            'end_date' => gmdate('Y-m-d'),
             'per_page' => 250,
             'page' => 1,
         ];
+
+        if ($months !== 'all') {
+            $defaults['start_date'] = gmdate('Y-m-d', strtotime("-{$months} months"));
+            $defaults['end_date'] = gmdate('Y-m-d');
+        }
+
         if ($this->profile_id) {
             $defaults['profile_id'] = $this->profile_id;
         }
@@ -67,7 +74,7 @@ class WCM_API {
         return !is_wp_error($response);
     }
 
-    private function request(string $endpoint): array|WP_Error {
+    private function request(string $endpoint, int $retry = 0): array|WP_Error {
         $response = wp_remote_get(self::BASE_URL . $endpoint, [
             'timeout' => 30,
             'headers' => [
@@ -81,6 +88,13 @@ class WCM_API {
         }
 
         $code = wp_remote_retrieve_response_code($response);
+
+        if ($code === 429 && $retry < 3) {
+            // WhatConverts rate limit hit - exponential backoff (2s, 4s, 8s)
+            sleep(pow(2, $retry + 1));
+            return $this->request($endpoint, $retry + 1);
+        }
+
         if ($code !== 200) {
             return new WP_Error('wcm_api_error', "API returned status $code");
         }

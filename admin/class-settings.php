@@ -73,9 +73,10 @@ class WCM_Settings {
             <hr>
             <h2>Shortcodes</h2>
             <table class="widefat" style="max-width:500px">
-                <tr><td><code>[wc_qualified_leads]</code></td><td>Qualified leads count</td></tr>
-                <tr><td><code>[wc_closed_leads]</code></td><td>Closed leads count</td></tr>
-                <tr><td><code>[wc_annual_value]</code></td><td>Total value (currency)</td></tr>
+                <tr><td><code>[wc_qualified_leads]</code></td><td>Qualified leads count (quotable = Yes)</td></tr>
+                <tr><td><code>[wc_closed_leads]</code></td><td>Closed leads count (has sales value)</td></tr>
+                <tr><td><code>[wc_annual_sales_value]</code></td><td>Total sales value (closed revenue)</td></tr>
+                <tr><td><code>[wc_annual_quote_value]</code></td><td>Total quote value (potential revenue)</td></tr>
                 <tr><td><code>[wc_total_leads]</code></td><td>All leads count</td></tr>
                 <tr><td><code>[wc_last_updated]</code></td><td>Last refresh time</td></tr>
             </table>
@@ -102,7 +103,8 @@ class WCM_Settings {
         <table class="widefat" style="max-width:300px">
             <tr><td>Qualified</td><td><?php echo number_format($metrics['qualified_leads']); ?></td></tr>
             <tr><td>Closed</td><td><?php echo number_format($metrics['closed_leads']); ?></td></tr>
-            <tr><td>Value</td><td>$<?php echo number_format($metrics['annual_value']); ?></td></tr>
+            <tr><td>Sales Value</td><td>$<?php echo number_format($metrics['annual_sales_value']); ?></td></tr>
+            <tr><td>Quote Value</td><td>$<?php echo number_format($metrics['annual_quote_value']); ?></td></tr>
             <tr><td>Total</td><td><?php echo number_format($metrics['total_leads']); ?></td></tr>
         </table>
         <?php
@@ -128,7 +130,7 @@ class WCM_Settings {
         if (!current_user_can('manage_options')) wp_die('Unauthorized');
         check_admin_referer('wcm_clear_cache', 'wcm_nonce');
 
-        delete_transient('wcm_metrics_cache');
+        (new WCM_Metrics())->clear_all_caches();
         wp_redirect(add_query_arg('wcm_message', 'cache_cleared', admin_url('options-general.php?page=' . self::PAGE)));
         exit;
     }
