@@ -41,7 +41,7 @@ class MetricsTest extends TestCase {
         ]);
 
         $this->assertEquals(3, $result['closed_leads']);
-        $this->assertEquals(3500.0, $result['annual_sales_value']);
+        $this->assertEquals(3500.0, $result['sales_value']);
     }
 
     public function test_sums_quote_value_separately(): void {
@@ -53,8 +53,8 @@ class MetricsTest extends TestCase {
             ['sales_value' => 200, 'quote_value' => 300],
         ]);
 
-        $this->assertEquals(1800.0, $result['annual_quote_value']);
-        $this->assertEquals(200.0, $result['annual_sales_value']);
+        $this->assertEquals(1800.0, $result['quote_value']);
+        $this->assertEquals(200.0, $result['sales_value']);
     }
 
     public function test_tracks_sales_and_quote_values_independently(): void {
@@ -65,16 +65,16 @@ class MetricsTest extends TestCase {
         ]);
 
         $this->assertEquals(1, $result['closed_leads']);
-        $this->assertEquals(1000.0, $result['annual_sales_value']);
-        $this->assertEquals(999.0, $result['annual_quote_value']);
+        $this->assertEquals(1000.0, $result['sales_value']);
+        $this->assertEquals(999.0, $result['quote_value']);
     }
 
     public function test_returns_cached_data_without_api_call(): void {
         Functions\when('get_transient')->justReturn([
             'qualified_leads' => 100,
             'closed_leads' => 50,
-            'annual_sales_value' => 10000,
-            'annual_quote_value' => 15000,
+            'sales_value' => 10000,
+            'quote_value' => 15000,
             'total_leads' => 200,
             'last_updated' => '2024-01-01 12:00:00',
         ]);
@@ -100,8 +100,8 @@ class MetricsTest extends TestCase {
 
         $this->assertEquals(1, $result['qualified_leads']);
         $this->assertEquals(1, $result['closed_leads']);
-        $this->assertEquals(500.0, $result['annual_sales_value']);
-        $this->assertEquals(750.0, $result['annual_quote_value']);
+        $this->assertEquals(500.0, $result['sales_value']);
+        $this->assertEquals(750.0, $result['quote_value']);
     }
 
     public function test_force_refresh_bypasses_cache(): void {
@@ -115,7 +115,7 @@ class MetricsTest extends TestCase {
         $this->assertEquals(0, $result['qualified_leads']);
     }
 
-    public function test_default_months_is_all_time(): void {
+    public function test_default_months_is_twelve(): void {
         Functions\when('get_transient')->justReturn(false);
         Functions\when('set_transient')->justReturn(true);
 
@@ -123,7 +123,7 @@ class MetricsTest extends TestCase {
         $api->expects($this->once())
             ->method('fetch_leads')
             ->with($this->callback(function($params) {
-                return $params['months'] === 'all';
+                return $params['months'] === '12';
             }))
             ->willReturn([]);
 

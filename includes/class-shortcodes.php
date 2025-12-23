@@ -5,15 +5,15 @@ class WCM_Shortcodes {
     public static function register(): void {
         add_shortcode('wc_qualified_leads', [self::class, 'qualified_leads']);
         add_shortcode('wc_closed_leads', [self::class, 'closed_leads']);
-        add_shortcode('wc_annual_sales_value', [self::class, 'annual_sales_value']);
-        add_shortcode('wc_annual_quote_value', [self::class, 'annual_quote_value']);
+        add_shortcode('wc_sales_value', [self::class, 'sales_value']);
+        add_shortcode('wc_quote_value', [self::class, 'quote_value']);
         add_shortcode('wc_total_leads', [self::class, 'total_leads']);
         add_shortcode('wc_last_updated', [self::class, 'last_updated']);
         add_shortcode('wc_debug', [self::class, 'debug']);
     }
 
     private static function get_metric(string $key, array $atts) {
-        $atts = shortcode_atts(['account_id' => '', 'months' => 'all'], $atts);
+        $atts = shortcode_atts(['account_id' => '', 'months' => '12'], $atts);
         $account_id = $atts['account_id'] ?: null;
         $months = $atts['months'];
 
@@ -31,14 +31,14 @@ class WCM_Shortcodes {
         return esc_html($val !== null ? number_format($val) : '—');
     }
 
-    public static function annual_sales_value($atts): string {
-        $val = self::get_metric('annual_sales_value', $atts ?: []);
+    public static function sales_value($atts): string {
+        $val = self::get_metric('sales_value', $atts ?: []);
         if ($val === null) return esc_html('—');
         return esc_html('$' . number_format($val));
     }
 
-    public static function annual_quote_value($atts): string {
-        $val = self::get_metric('annual_quote_value', $atts ?: []);
+    public static function quote_value($atts): string {
+        $val = self::get_metric('quote_value', $atts ?: []);
         if ($val === null) return esc_html('—');
         return esc_html('$' . number_format($val));
     }
@@ -49,7 +49,7 @@ class WCM_Shortcodes {
     }
 
     public static function last_updated($atts): string {
-        $a = shortcode_atts(['account_id' => '', 'months' => 'all', 'format' => 'M j, Y g:i a'], $atts ?: []);
+        $a = shortcode_atts(['account_id' => '', 'months' => '12', 'format' => 'M j, Y g:i a'], $atts ?: []);
         $account_id = $a['account_id'] ?: null;
         $months = $a['months'];
 
@@ -65,7 +65,7 @@ class WCM_Shortcodes {
             return '';
         }
 
-        $atts = shortcode_atts(['account_id' => '', 'months' => 'all'], $atts ?: []);
+        $atts = shortcode_atts(['account_id' => '', 'months' => '12'], $atts ?: []);
         $account_id = $atts['account_id'] ?: null;
         $months = $atts['months'];
 
@@ -81,8 +81,8 @@ class WCM_Shortcodes {
         $output = "=== CALCULATED METRICS (months: $months) ===\n";
         $output .= "Qualified Leads: " . $result['qualified_leads'] . "\n";
         $output .= "Closed Leads: " . $result['closed_leads'] . "\n";
-        $output .= "Annual Sales Value: $" . number_format($result['annual_sales_value']) . "\n";
-        $output .= "Annual Quote Value: $" . number_format($result['annual_quote_value']) . "\n";
+        $output .= "Sales Value: $" . number_format($result['sales_value']) . "\n";
+        $output .= "Quote Value: $" . number_format($result['quote_value']) . "\n";
         $output .= "Total Leads: " . $result['total_leads'] . "\n\n";
 
         // Also show sample leads

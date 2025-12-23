@@ -8,11 +8,11 @@ class WCM_Metrics {
         $this->api = $api ?? new WCM_API();
     }
 
-    public function get_metrics(bool $force_refresh = false, string $months = 'all'): array|WP_Error {
+    public function get_metrics(bool $force_refresh = false, string $months = '12'): array|WP_Error {
         return $this->get_metrics_for_account(null, $force_refresh, $months);
     }
 
-    public function get_metrics_for_account(?string $account_id, bool $force_refresh = false, string $months = 'all'): array|WP_Error {
+    public function get_metrics_for_account(?string $account_id, bool $force_refresh = false, string $months = '12'): array|WP_Error {
         $cache_key = 'wcm_metrics_' . ($account_id ?: 'all') . '_' . $months;
 
         if (!$force_refresh) {
@@ -64,8 +64,8 @@ class WCM_Metrics {
         return [
             'qualified_leads' => $qualified,
             'closed_leads' => $closed,
-            'annual_sales_value' => $total_sales_value,
-            'annual_quote_value' => $total_quote_value,
+            'sales_value' => $total_sales_value,
+            'quote_value' => $total_quote_value,
             'total_leads' => count($leads),
             'last_updated' => gmdate('Y-m-d H:i:s'),
         ];

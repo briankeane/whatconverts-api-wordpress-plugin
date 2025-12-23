@@ -29,8 +29,8 @@ Use a **Master Account** API key if you need to query multiple sub-accounts.
 ```
 [wc_qualified_leads]
 [wc_closed_leads]
-[wc_annual_sales_value]
-[wc_annual_quote_value]
+[wc_sales_value]
+[wc_quote_value]
 [wc_total_leads]
 [wc_last_updated]
 ```
@@ -40,27 +40,26 @@ Use a **Master Account** API key if you need to query multiple sub-accounts.
 ```
 [wc_qualified_leads account_id="102204"]
 [wc_closed_leads account_id="102204"]
-[wc_annual_sales_value account_id="102204"]
-[wc_annual_quote_value account_id="102204"]
+[wc_sales_value account_id="102204"]
+[wc_quote_value account_id="102204"]
 ```
 
 Find the `account_id` in WhatConverts under **Accounts → Account ID** column.
 
 ### Date Range
 
-By default, all shortcodes show **all-time** data. Use the `months` parameter to filter:
+By default, all shortcodes show the **last 12 months** of data. Use the `months` parameter to adjust:
 
 ```
-[wc_annual_quote_value]                 → all time (default)
-[wc_annual_quote_value months="1"]      → last 1 month
-[wc_annual_quote_value months="3"]      → last 3 months
-[wc_annual_quote_value months="6"]      → last 6 months
-[wc_annual_quote_value months="12"]     → last 12 months
+[wc_quote_value]                 → last 12 months (default)
+[wc_quote_value months="3"]      → last 3 months
+[wc_quote_value months="6"]      → last 6 months
+[wc_quote_value months="all"]    → all time (fetched in yearly chunks)
 ```
 
 Combine with account_id:
 ```
-[wc_annual_quote_value account_id="102204" months="3"]
+[wc_quote_value account_id="102204" months="3"]
 ```
 
 ## Using with Elementor
@@ -94,9 +93,9 @@ make zip
 |-----------|---------------|
 | `wc_qualified_leads` | Count of leads where `quotable` = "Yes" |
 | `wc_closed_leads` | Count of leads with `sales_value` > 0 |
-| `wc_annual_sales_value` | Sum of all `sales_value` (closed revenue) |
-| `wc_annual_quote_value` | Sum of all `quote_value` (potential revenue) |
-| `wc_total_leads` | Total lead count (last 12 months) |
+| `wc_sales_value` | Sum of all `sales_value` (closed revenue) |
+| `wc_quote_value` | Sum of all `quote_value` (potential revenue) |
+| `wc_total_leads` | Total lead count |
 
 ## Updating the Plugin
 

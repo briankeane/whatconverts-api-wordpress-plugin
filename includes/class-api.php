@@ -27,15 +27,23 @@ class WCM_API {
         $months = $params['months'] ?? '12';
         unset($params['months']);
 
+        if ($months === 'all') {
+            return $this->fetch_all_leads($params);
+        }
+
+        return $this->fetch_leads_for_period($params, $months);
+    }
+
+    private function fetch_leads_for_period(array $params, string $months, ?string $end_date = null): array|WP_Error {
+        $end = $end_date ?? gmdate('Y-m-d');
+        $start = gmdate('Y-m-d', strtotime("-{$months} months", strtotime($end)));
+
         $defaults = [
             'per_page' => 250,
             'page' => 1,
+            'start_date' => $start,
+            'end_date' => $end,
         ];
-
-        if ($months !== 'all') {
-            $defaults['start_date'] = gmdate('Y-m-d', strtotime("-{$months} months"));
-            $defaults['end_date'] = gmdate('Y-m-d');
-        }
 
         if ($this->profile_id) {
             $defaults['profile_id'] = $this->profile_id;
@@ -61,6 +69,36 @@ class WCM_API {
             $total_pages = $response['total_pages'] ?? 1;
             $page++;
         } while ($page <= $total_pages && $page <= 100);
+
+        return $all_leads;
+    }
+
+    private function fetch_all_leads(array $params): array|WP_Error {
+        $all_leads = [];
+        $end_date = gmdate('Y-m-d');
+        $max_chunks = 10; // 10 years max
+
+        for ($chunk = 0; $chunk < $max_chunks; $chunk++) {
+            $leads = $this->fetch_leads_for_period($params, '12', $end_date);
+
+            if (is_wp_error($leads)) {
+                return $leads;
+            }
+
+            if (empty($leads)) {
+                break; // No more leads in this period
+            }
+
+            $all_leads = array_merge($all_leads, $leads);
+
+            // Move end_date back 12 months for next chunk
+            $end_date = gmdate('Y-m-d', strtotime('-12 months', strtotime($end_date)));
+
+            // Small delay between chunks to avoid rate limiting
+            if ($chunk < $max_chunks - 1) {
+                usleep(200000); // 200ms
+            }
+        }
 
         return $all_leads;
     }
