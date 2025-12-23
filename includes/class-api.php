@@ -3,6 +3,13 @@ if (!defined('ABSPATH')) exit;
 
 class WCM_API {
     private const BASE_URL = 'https://app.whatconverts.com/api/v1';
+    private const MAX_REQUESTS_PER_LOAD = 25;
+
+    private static int $request_count = 0;
+
+    public static function get_request_count(): int {
+        return self::$request_count;
+    }
 
     private string $token;
     private string $secret;
@@ -39,8 +46,8 @@ class WCM_API {
         $start = gmdate('Y-m-d', strtotime("-{$months} months", strtotime($end)));
 
         $defaults = [
-            'per_page' => 250,
-            'page' => 1,
+            'leads_per_page' => 2500,  // API max is 2500
+            'page_number' => 1,
             'start_date' => $start,
             'end_date' => $end,
         ];
@@ -51,11 +58,11 @@ class WCM_API {
 
         $params = wp_parse_args($params, $defaults);
         $all_leads = [];
-        $page = 1;
+        $page_number = 1;
         $total_pages = 1;
 
         do {
-            $params['page'] = $page;
+            $params['page_number'] = $page_number;
             $response = $this->request('/leads?' . http_build_query($params));
 
             if (is_wp_error($response)) {
@@ -63,12 +70,16 @@ class WCM_API {
             }
 
             if (isset($response['leads'])) {
+                self::log("Page $page_number: received " . count($response['leads']) . " leads");
                 $all_leads = array_merge($all_leads, $response['leads']);
             }
 
             $total_pages = $response['total_pages'] ?? 1;
-            $page++;
-        } while ($page <= $total_pages && $page <= 100);
+            self::log("Total pages: $total_pages, current page: $page_number");
+            $page_number++;
+        } while ($page_number <= $total_pages && $page_number <= 100);
+
+        self::log("Total leads fetched: " . count($all_leads));
 
         return $all_leads;
     }
@@ -108,11 +119,20 @@ class WCM_API {
             return new WP_Error('wcm_not_configured', 'API credentials not configured');
         }
 
-        $response = $this->request('/leads?per_page=1');
+        $response = $this->request('/leads?leads_per_page=1');
         return !is_wp_error($response);
     }
 
     private function request(string $endpoint, int $retry = 0): array|WP_Error {
+        // Failsafe: prevent infinite loops
+        self::$request_count++;
+        if (self::$request_count > self::MAX_REQUESTS_PER_LOAD) {
+            self::log("FAILSAFE: Max requests (" . self::MAX_REQUESTS_PER_LOAD . ") exceeded, aborting");
+            return new WP_Error('wcm_max_requests', 'Maximum API requests exceeded for this page load');
+        }
+
+        self::log("Request #" . self::$request_count . ": " . self::BASE_URL . $endpoint . ($retry > 0 ? " (retry $retry)" : ""));
+
         $response = wp_remote_get(self::BASE_URL . $endpoint, [
             'timeout' => 30,
             'headers' => [
@@ -122,13 +142,15 @@ class WCM_API {
         ]);
 
         if (is_wp_error($response)) {
+            self::log("Error: " . $response->get_error_message());
             return $response;
         }
 
         $code = wp_remote_retrieve_response_code($response);
+        self::log("Response: HTTP $code");
 
         if ($code === 429 && $retry < 3) {
-            // WhatConverts rate limit hit - exponential backoff (2s, 4s, 8s)
+            self::log("Rate limited, backing off...");
             sleep(pow(2, $retry + 1));
             return $this->request($endpoint, $retry + 1);
         }
@@ -145,5 +167,11 @@ class WCM_API {
         }
 
         return $data;
+    }
+
+    private static function log(string $message): void {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WCM_API] ' . $message);
+        }
     }
 }

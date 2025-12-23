@@ -13,6 +13,8 @@ class WCM_Metrics {
     }
 
     public function get_metrics_for_account(?string $account_id, bool $force_refresh = false, string $months = '12'): array|WP_Error {
+        $months = $this->sanitize_months($months);
+        $account_id = $this->sanitize_account_id($account_id);
         $cache_key = 'wcm_metrics_' . ($account_id ?: 'all') . '_' . $months;
 
         if (!$force_refresh) {
@@ -33,7 +35,7 @@ class WCM_Metrics {
         }
 
         $metrics = $this->calculate_metrics($leads);
-        set_transient($cache_key, $metrics, WCM_CACHE_TTL);
+        set_transient($cache_key, $metrics, wcm_get_cache_ttl());
 
         return $metrics;
     }
@@ -72,14 +74,70 @@ class WCM_Metrics {
     }
 
     public function clear_cache(?string $account_id = null): void {
-        if ($account_id) {
-            delete_transient('wcm_metrics_' . $account_id);
+        $months_options = ['1', '3', '6', '12', 'all'];
+        $account_key = $account_id ?: 'all';
+
+        foreach ($months_options as $months) {
+            $this->delete_transient_everywhere('wcm_metrics_' . $account_key . '_' . $months);
         }
-        delete_transient('wcm_metrics_all');
+    }
+
+    private function sanitize_months(string $months): string {
+        $allowed = ['1', '3', '6', '12', 'all'];
+        return in_array($months, $allowed, true) ? $months : '12';
+    }
+
+    private function sanitize_account_id(?string $account_id): ?string {
+        if (empty($account_id)) {
+            return null;
+        }
+
+        return preg_match('/^\d+$/', $account_id) === 1 ? $account_id : null;
     }
 
     public function clear_all_caches(): void {
         global $wpdb;
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_wcm\_metrics\_%' ESCAPE '\\' OR option_name LIKE '\_transient\_timeout\_wcm\_metrics\_%' ESCAPE '\\'");
+
+        // Get all our transient keys from database
+        $transients = $wpdb->get_col(
+            "SELECT REPLACE(option_name, '_transient_', '') FROM {$wpdb->options}
+             WHERE option_name LIKE '_transient_wcm_metrics_%'
+             AND option_name NOT LIKE '_transient_timeout_%'"
+        );
+
+        // Delete each from everywhere
+        foreach ($transients as $transient) {
+            $this->delete_transient_everywhere($transient);
+        }
+
+        // Also clear common patterns directly (in case object cache has keys not in DB)
+        $months_options = ['1', '3', '6', '12', 'all'];
+        $account_ids = ['all', '102204', '106898', '106894', '99459'];
+
+        foreach ($account_ids as $account_id) {
+            foreach ($months_options as $months) {
+                $this->delete_transient_everywhere('wcm_metrics_' . $account_id . '_' . $months);
+            }
+        }
+
+        // Nuclear option: also delete directly from database
+        $wpdb->query(
+            "DELETE FROM {$wpdb->options}
+             WHERE option_name LIKE '_transient_wcm_metrics_%'
+             OR option_name LIKE '_transient_timeout_wcm_metrics_%'"
+        );
+    }
+
+    private function delete_transient_everywhere(string $transient): void {
+        // 1. Try WordPress transient API (handles object cache if configured correctly)
+        delete_transient($transient);
+
+        // 2. Explicitly delete from object cache (Redis/Memcached)
+        wp_cache_delete($transient, 'transient');
+        wp_cache_delete($transient, 'options');
+
+        // 3. Explicitly delete from database (in case object cache didn't clear it)
+        delete_option('_transient_' . $transient);
+        delete_option('_transient_timeout_' . $transient);
     }
 }

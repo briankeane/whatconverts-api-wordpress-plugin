@@ -70,7 +70,9 @@ Combine with account_id:
 
 ## Caching
 
-Data is cached for 1 hour per account. Clear cache at **Settings → WhatConverts → Clear Cache**.
+- Data is cached per account and date range. Default TTL is 60 minutes and can be configured under **Settings → WhatConverts API → Cache Length (minutes)** (minimum 5 minutes).
+- A cron job prewarms the cache hourly (`wcm_prewarm_cache`), so front-end/admin requests should not need to fetch live data. It prewarms existing cache keys and any targets returned by the `wcm_prewarm_targets` filter.
+- Clear cache at **Settings → WhatConverts API → Clear Cache**.
 
 ## Development
 
@@ -96,6 +98,51 @@ make zip
 | `wc_sales_value` | Sum of all `sales_value` (closed revenue) |
 | `wc_quote_value` | Sum of all `quote_value` (potential revenue) |
 | `wc_total_leads` | Total lead count |
+
+## Debugging
+
+### Debug Attribute
+
+Add `debug="true"` to any shortcode to log debug info to the browser console (admins only):
+
+```
+[wc_sales_value account_id="102204" debug="true"]
+```
+
+Open browser DevTools (F12) → Console to see:
+- Cache hit/miss status
+- Number of API requests made
+- All calculated metrics
+- Account ID and date range used
+
+### Debug Shortcode
+
+Use `[wc_debug]` for a full debug summary:
+
+```
+[wc_debug account_id="102204"]
+```
+
+Shows:
+- API request count
+- All calculated metrics with explanations
+- How to verify the numbers in WhatConverts UI
+
+### Server Logging
+
+When `WP_DEBUG` is enabled, API requests are logged to `wp-content/debug.log`:
+
+```php
+// In wp-config.php
+define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
+```
+
+## API Limits
+
+- Max 25 API requests per page load (failsafe)
+- 2500 leads fetched per request (API maximum)
+- Rate limit retries with exponential backoff
 
 ## Updating the Plugin
 

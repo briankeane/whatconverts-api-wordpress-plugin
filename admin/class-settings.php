@@ -19,6 +19,15 @@ class WCM_Settings {
         foreach (['wcm_api_token', 'wcm_api_secret', 'wcm_profile_id'] as $opt) {
             register_setting('wcm_settings', $opt, ['sanitize_callback' => 'sanitize_text_field']);
         }
+        register_setting('wcm_settings', 'wcm_cache_length_minutes', [
+            'sanitize_callback' => function($value) {
+                $minutes = absint($value);
+                if ($minutes < 5) {
+                    $minutes = 60; // fallback to default hour if too low/empty
+                }
+                return $minutes;
+            }
+        ]);
 
         add_settings_section('wcm_api_section', 'API Credentials', function() {
             echo '<p>Enter your WhatConverts API credentials from Tracking → Integrations → API Keys.</p>';
@@ -35,6 +44,18 @@ class WCM_Settings {
         add_settings_field('wcm_profile_id', 'Profile ID (optional)', function() {
             printf('<input type="text" name="wcm_profile_id" value="%s" class="regular-text" /><p class="description">Leave empty for all profiles.</p>', esc_attr(get_option('wcm_profile_id', '')));
         }, self::PAGE, 'wcm_api_section');
+
+        add_settings_section('wcm_cache_section', 'Caching', function() {
+            echo '<p>Control how long metrics stay cached before refreshing.</p>';
+        }, self::PAGE);
+
+        add_settings_field('wcm_cache_length_minutes', 'Cache Length (minutes)', function() {
+            $val = intval(get_option('wcm_cache_length_minutes', 60));
+            printf(
+                '<input type="number" name="wcm_cache_length_minutes" value="%d" min="5" class="small-text" /> <span class="description">Minimum 5 minutes. Default 60.</span>',
+                $val
+            );
+        }, self::PAGE, 'wcm_cache_section');
     }
 
     public static function render_page(): void {

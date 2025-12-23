@@ -4,6 +4,7 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 
 define('ABSPATH', '/tmp/wordpress/');
 define('HOUR_IN_SECONDS', 3600);
+define('MINUTE_IN_SECONDS', 60);
 define('WCM_PLUGIN_DIR', dirname(__DIR__) . '/');
 define('WCM_CACHE_TTL', HOUR_IN_SECONDS);
 
@@ -33,6 +34,20 @@ if (!class_exists('WP_Error')) {
     }
 }
 
+if (!function_exists('wcm_get_cache_ttl')) {
+    function wcm_get_cache_ttl(): int {
+        if (function_exists('get_option')) {
+            $minutes = absint(get_option('wcm_cache_length_minutes', 60));
+            if ($minutes < 5) {
+                $minutes = 60;
+            }
+            return max(300, $minutes * MINUTE_IN_SECONDS);
+        }
+        return WCM_CACHE_TTL;
+    }
+}
+
 require_once WCM_PLUGIN_DIR . 'includes/class-api.php';
 require_once WCM_PLUGIN_DIR . 'includes/class-metrics.php';
+require_once WCM_PLUGIN_DIR . 'includes/class-cron.php';
 require_once WCM_PLUGIN_DIR . 'includes/class-shortcodes.php';
